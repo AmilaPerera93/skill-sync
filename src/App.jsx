@@ -8,12 +8,14 @@ import MentorDashboard from './components/MentorDashboard';
 import WarRoom from './components/WarRoom';
 import TopUp from './components/TopUp'; // Import the new TopUp component
 import { LogOut, Zap, DollarSign, Plus } from 'lucide-react';
+import LandingPage from './components/LandingPage';
 
 function App() {
   const { user, profile, logout, loading } = useAuth();
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [showTopUp, setShowTopUp] = useState(false);
-
+  const [showLogin, setShowLogin] = useState(false);
+  
   useEffect(() => {
     if (!user || !profile) return;
 
