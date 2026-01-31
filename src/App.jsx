@@ -15,7 +15,7 @@ function App() {
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [showTopUp, setShowTopUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  
+
   useEffect(() => {
     if (!user || !profile) return;
 
@@ -43,7 +43,13 @@ function App() {
     </div>
   );
 
-  if (!user) return <Login />;
+  if (!user) {
+    if (showLogin) {
+      return <Login />;
+    } else {
+      return <LandingPage onGetStarted={() => setShowLogin(true)} />;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans">
