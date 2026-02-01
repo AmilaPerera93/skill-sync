@@ -6,9 +6,10 @@ import Login from './components/Login';
 import PanicButton from './components/PanicButton';
 import MentorDashboard from './components/MentorDashboard';
 import WarRoom from './components/WarRoom';
-import TopUp from './components/TopUp'; // Import the new TopUp component
-import { LogOut, Zap, DollarSign, Plus } from 'lucide-react';
+import TopUp from './components/TopUp';
 import LandingPage from './components/LandingPage';
+import SessionHistory from './components/SessionHistory'; // Ensure this is created
+import { LogOut, Zap, DollarSign, Plus } from 'lucide-react';
 
 function App() {
   const { user, profile, logout, loading } = useAuth();
@@ -16,6 +17,7 @@ function App() {
   const [showTopUp, setShowTopUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
+  // 1. Persistent Session Listener
   useEffect(() => {
     if (!user || !profile) return;
 
@@ -23,12 +25,16 @@ function App() {
     const q = query(
       collection(db, "help_requests"),
       where(fieldToWatch, "==", user.uid),
-      where("status", "==", "active")
+      where("status", "in", ["pending", "active"]) 
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        setActiveSessionId(snapshot.docs[0].id);
+        const session = snapshot.docs[0];
+        // Only set activeSessionId for WarRoom if status is actually 'active'
+        if (session.data().status === 'active') {
+            setActiveSessionId(session.id);
+        }
       } else {
         setActiveSessionId(null);
       }
@@ -43,14 +49,16 @@ function App() {
     </div>
   );
 
+  // 2. Public Routing (Landing vs Login)
   if (!user) {
-    if (showLogin) {
-      return <Login />;
-    } else {
-      return <LandingPage onGetStarted={() => setShowLogin(true)} />;
-    }
+    return showLogin ? (
+      <Login />
+    ) : (
+      <LandingPage onGetStarted={() => setShowLogin(true)} />
+    );
   }
 
+  // 3. Authenticated App Shell
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans">
       <nav className="border-b border-slate-900 p-4 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
@@ -63,7 +71,6 @@ function App() {
               </h2>
             </div>
 
-            {/* CLICKABLE WALLET CHIP */}
             <button 
                 onClick={() => setShowTopUp(true)}
                 className="hidden sm:flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-1.5 rounded-2xl shadow-inner hover:border-blue-500/50 transition-all group"
@@ -99,30 +106,29 @@ function App() {
             onLeave={() => setActiveSessionId(null)} 
           />
         ) : (
-          <>
+          <div className="max-w-4xl mx-auto space-y-16">
             {profile?.role === 'mentor' ? (
               <MentorDashboard userId={user.uid} /> 
             ) : (
-              <div className="max-w-xl mx-auto space-y-8">
-                <header className="text-center">
-                  <h1 className="text-6xl font-black mb-4 tracking-tighter uppercase italic text-white">Stuck?</h1>
-                  <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.3em]">Broadcast your signal to the network.</p>
+              <div className="space-y-12">
+                <header className="text-center pt-10">
+                  <h1 className="text-6xl font-black mb-4 tracking-tighter uppercase italic text-white leading-none">Stuck?</h1>
+                  <p className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.4em]">Broadcast your signal to the network.</p>
                 </header>
-                {/* Pass profile to PanicButton to check balance */}
                 <PanicButton userId={user.uid} profile={profile} onSessionStart={(id) => setActiveSessionId(id)} />
+                <SessionHistory userId={user.uid} role="developer" />
               </div>
             )}
-          </>
+          </div>
         )}
       </main>
 
-      {/* TOP-UP MODAL OVERLAY */}
       {showTopUp && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6">
             <div className="relative w-full max-w-md">
                 <button 
                     onClick={() => setShowTopUp(false)}
-                    className="absolute -top-10 right-0 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-[0.2em] transition-colors"
+                    className="absolute -top-10 right-0 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-[0.2em]"
                 >
                     [ Close_Terminal ]
                 </button>
