@@ -32,7 +32,6 @@ function App() {
       if (!snapshot.empty) {
         const session = snapshot.docs[0];
         const status = session.data().status;
-        
         if (status === 'active') {
           setActiveSessionId(session.id);
           setIsPending(false);
@@ -49,7 +48,6 @@ function App() {
     return () => unsubscribe();
   }, [user, profile]);
 
-  // Prevent "Dashboard Flashing" - Wait for profile to load
   if (loading || (user && !profile)) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -73,34 +71,27 @@ function App() {
                   Skill_Sync <span className="text-blue-500">//</span> {profile?.role}
               </h2>
             </div>
-
             <button 
                 onClick={() => setShowTopUp(true)}
-                className="hidden sm:flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-1.5 rounded-2xl shadow-inner hover:border-blue-500/50 transition-all group"
+                className="hidden sm:flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-1.5 rounded-2xl hover:border-blue-500/50 transition-all group"
             >
-                <div className="bg-green-500/20 p-1 rounded-lg group-hover:bg-blue-500/20 transition-all">
-                    <DollarSign size={14} className="text-green-500 group-hover:text-blue-500" />
-                </div>
-                <div className="flex flex-col items-start">
-                    <span className="text-[8px] font-black text-slate-500 uppercase leading-none">Balance</span>
-                    <span className="text-sm font-black text-white font-mono">
-                        ${profile?.walletBalance?.toFixed(2) || "0.00"}
-                    </span>
-                </div>
-                <Plus size={12} className="text-blue-500 ml-1 opacity-50 group-hover:opacity-100" />
+                <DollarSign size={14} className="text-green-500" />
+                <span className="text-sm font-black font-mono text-white">
+                    ${profile?.walletBalance?.toFixed(2) || "0.00"}
+                </span>
+                <Plus size={12} className="text-blue-500" />
             </button>
           </div>
-
           <div className="flex items-center gap-4">
             <span className="hidden md:inline text-[10px] font-mono text-slate-500 uppercase tracking-widest">{user.email}</span>
-            <button onClick={logout} className="p-2 hover:bg-red-500/10 rounded-xl text-red-500 transition-all active:scale-90">
+            <button onClick={logout} className="p-2 hover:bg-red-500/10 rounded-xl text-red-500 transition-all">
               <LogOut size={20} />
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="container mx-auto py-10 px-4">
+      <main className="container mx-auto py-10 px-4 max-w-4xl">
         {activeSessionId ? (
           <WarRoom 
             sessionId={activeSessionId} 
@@ -109,18 +100,16 @@ function App() {
             onLeave={() => setActiveSessionId(null)} 
           />
         ) : (
-          <div className="max-w-4xl mx-auto">
+          <div className="space-y-16">
             {profile?.role === 'mentor' ? (
               <MentorDashboard userId={user.uid} /> 
             ) : (
               <div className="space-y-12">
-                <header className="text-center pt-10">
-                  <h1 className="text-6xl font-black mb-4 tracking-tighter uppercase italic text-white leading-none">
-                    {isPending ? "Signal_Active" : "Stuck?"}
+                <header className="text-center pt-6">
+                  <h1 className="text-7xl font-black mb-4 tracking-tighter uppercase italic text-white leading-none">
+                    {isPending ? "SCANNING" : "STUCK?"}
                   </h1>
-                  <p className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.4em]">
-                    {isPending ? "Waiting for mentor uplink..." : "Broadcast your signal to the network."}
-                  </p>
+                  <div className="h-1 w-24 bg-blue-600 mx-auto rounded-full" />
                 </header>
                 <PanicButton 
                     userId={user.uid} 
@@ -138,11 +127,8 @@ function App() {
       {showTopUp && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6">
             <div className="relative w-full max-w-md">
-                <button 
-                    onClick={() => setShowTopUp(false)}
-                    className="absolute -top-10 right-0 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-[0.2em] transition-colors"
-                >
-                    [ Close_Terminal ]
+                <button onClick={() => setShowTopUp(false)} className="absolute -top-10 right-0 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-widest">
+                    [ Close ]
                 </button>
                 <TopUp userId={user.uid} onComplete={() => setShowTopUp(false)} />
             </div>
