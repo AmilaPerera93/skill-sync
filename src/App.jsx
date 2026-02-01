@@ -8,16 +8,16 @@ import MentorDashboard from './components/MentorDashboard';
 import WarRoom from './components/WarRoom';
 import TopUp from './components/TopUp';
 import LandingPage from './components/LandingPage';
-import SessionHistory from './components/SessionHistory'; // Ensure this is created
+import SessionHistory from './components/SessionHistory';
 import { LogOut, Zap, DollarSign, Plus } from 'lucide-react';
 
 function App() {
   const { user, profile, logout, loading } = useAuth();
   const [activeSessionId, setActiveSessionId] = useState(null);
+  const [isPending, setIsPending] = useState(false); 
   const [showTopUp, setShowTopUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
-  // 1. Persistent Session Listener
   useEffect(() => {
     if (!user || !profile) return;
 
@@ -25,48 +25,51 @@ function App() {
     const q = query(
       collection(db, "help_requests"),
       where(fieldToWatch, "==", user.uid),
-      where("status", "in", ["pending", "active"]) 
+      where("status", "in", ["pending", "active"])
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         const session = snapshot.docs[0];
-        // Only set activeSessionId for WarRoom if status is actually 'active'
-        if (session.data().status === 'active') {
-            setActiveSessionId(session.id);
+        const status = session.data().status;
+        
+        if (status === 'active') {
+          setActiveSessionId(session.id);
+          setIsPending(false);
+        } else {
+          setIsPending(true);
+          setActiveSessionId(null);
         }
       } else {
         setActiveSessionId(null);
+        setIsPending(false);
       }
-    }, (error) => console.error("Session Listener Error:", error));
+    });
 
     return () => unsubscribe();
   }, [user, profile]);
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <Zap className="text-blue-500 animate-pulse" size={48} />
-    </div>
-  );
-
-  // 2. Public Routing (Landing vs Login)
-  if (!user) {
-    return showLogin ? (
-      <Login />
-    ) : (
-      <LandingPage onGetStarted={() => setShowLogin(true)} />
+  // Prevent "Dashboard Flashing" - Wait for profile to load
+  if (loading || (user && !profile)) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Zap className="text-blue-500 animate-pulse" size={48} />
+      </div>
     );
   }
 
-  // 3. Authenticated App Shell
+  if (!user) {
+    return showLogin ? <Login /> : <LandingPage onGetStarted={() => setShowLogin(true)} />;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
+    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30">
       <nav className="border-b border-slate-900 p-4 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black italic shadow-lg shadow-blue-500/20">S</div>
-              <h2 className="font-black italic tracking-tighter text-xl uppercase tracking-widest">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black italic shadow-lg shadow-blue-500/20 text-white">S</div>
+              <h2 className="font-black italic tracking-tighter text-xl uppercase tracking-widest text-white">
                   Skill_Sync <span className="text-blue-500">//</span> {profile?.role}
               </h2>
             </div>
@@ -106,16 +109,25 @@ function App() {
             onLeave={() => setActiveSessionId(null)} 
           />
         ) : (
-          <div className="max-w-4xl mx-auto space-y-16">
+          <div className="max-w-4xl mx-auto">
             {profile?.role === 'mentor' ? (
               <MentorDashboard userId={user.uid} /> 
             ) : (
               <div className="space-y-12">
                 <header className="text-center pt-10">
-                  <h1 className="text-6xl font-black mb-4 tracking-tighter uppercase italic text-white leading-none">Stuck?</h1>
-                  <p className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.4em]">Broadcast your signal to the network.</p>
+                  <h1 className="text-6xl font-black mb-4 tracking-tighter uppercase italic text-white leading-none">
+                    {isPending ? "Signal_Active" : "Stuck?"}
+                  </h1>
+                  <p className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.4em]">
+                    {isPending ? "Waiting for mentor uplink..." : "Broadcast your signal to the network."}
+                  </p>
                 </header>
-                <PanicButton userId={user.uid} profile={profile} onSessionStart={(id) => setActiveSessionId(id)} />
+                <PanicButton 
+                    userId={user.uid} 
+                    profile={profile} 
+                    existingPending={isPending} 
+                    onSessionStart={(id) => setActiveSessionId(id)} 
+                />
                 <SessionHistory userId={user.uid} role="developer" />
               </div>
             )}
@@ -128,7 +140,7 @@ function App() {
             <div className="relative w-full max-w-md">
                 <button 
                     onClick={() => setShowTopUp(false)}
-                    className="absolute -top-10 right-0 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-[0.2em]"
+                    className="absolute -top-10 right-0 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-[0.2em] transition-colors"
                 >
                     [ Close_Terminal ]
                 </button>
